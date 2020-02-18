@@ -1,14 +1,16 @@
-/* Super Monstruelle
-    Gouesnac'h / 15 fev 2020 / Fran6LaLAN #12
+/* Super Monstruelle ( Fran6 édition )
+    Gouesnac'h / 15 fev 2020 / Pendant la Fran6LaLAN #12
     Team Slip
+    
     arduino 1.8.5
       + lib. Arduboy2 version 5.2.1
       + ATMlib version 1.2.6
 
-    gameState = 0 : ecran titre
-    gameState = 1 : jeu en cours
-    gameState = 2 : fini et gagnant
-    gameState = 3 : fini et perdu
+    Des gouttes de sang tombent du haut de l'écran, il faut les rattraper avec la cup
+    si on les attrape : la jauge augmente (à droite)
+    si on les rate : la culotte se tache (à gauche)
+    ...
+
 */
 
 #include <Arduboy2.h>
@@ -20,19 +22,20 @@ Arduboy2 arduboy;
 Sprites sprites;
 ATMsynth ATM;
 
-byte gameState = 0;
-boolean newPlay = true;
+byte gameState = 0;      // position par défaut : écran titre
+boolean newPlay = true;  // utilisé pour remetre à zéro les variables
 
-byte pos = 50;      // position entre 0 et 100;
-byte level = 0;     // niveau : quel personnage
-byte jauge = 0;     // état de la jauge : nombre de gouttes chopées sur ce niveau
-byte slip = 0;      // état du slip : nombre de gouttes ratées
+byte pos = 50;           // position entre 0 et 100;
+byte level = 0;          // niveau : quel personnage
+byte jauge = 0;          // état de la jauge : nombre de gouttes chopées sur ce niveau
+byte slip = 0;           // état du slip : nombre de gouttes ratées
 
 // Variables pour les joueur
-int player_x, player_y, player_xmin, player_xmax;
+int player_x, player_y;  // coordonnées sur l'écran
 
 // Variables pour la goutte de sang
-int blood_x, blood_y, blood_dx, blood_dy;
+int blood_x, blood_y;    // cooordonnées sur l'écran 
+int blood_dx, blood_dy;  // déplacement sur chaque axe
 
 
 
@@ -47,10 +50,8 @@ void setup() {
   blood_dy = 1;
 
   arduboy.begin();
-  //Seed the random number generator
-  arduboy.initRandomSeed();
-  //Set the game to 60 frames per second
-  arduboy.setFrameRate(40);
+  arduboy.initRandomSeed(); //Seed the random number generator
+  arduboy.setFrameRate(40); //Set the game to 60 frames per second
   arduboy.audio.on();
   ATM.play(music);
   arduboy.clear();
@@ -74,13 +75,15 @@ void loop() {
   //if (arduboy.pressed(UP_BUTTON) && gameState == 1) gameState = 2; //
   //if (arduboy.pressed(DOWN_BUTTON) && gameState == 1) gameState = 3; //
 
-  // Définir l'état du jeu
+  // Définir l'état du jeu *******************************************
+  //   gameState = 0 : ecran titre
+  //   gameState = 1 : jeu en cours
+  //   gameState = 2 : fini et gagnant
+  //   gameState = 3 : fini et perdu
+  
   if ( gameState == 1 && slip > 3) gameState = 3;                 // GAME OVER!
   if ( gameState == 1 && jauge > 3 && level == 1) gameState = 2;  // WIN
   if ( gameState == 1 && jauge > 3 && level < 1) levelUp();       // LEVEL UP
-
-
-  // *******************************************
 
   switch (gameState) {
     case 0:
@@ -91,11 +94,9 @@ void loop() {
       break;
     case 2:
       gameOverWin();
-      //delay(5000);
       break;
     case 3:
       gameOverLost();
-      //delay(5000);
       break;
     default:
       break;
@@ -112,24 +113,25 @@ void gameTitle() {
 }
 
 void gamePlaying() {
-  //arduboy.setCursor(0, 0);
-  //arduboy.print("Playing");
-  if (newPlay) initNewPlay();
-  //if (level == 0) sprites.drawSelfMasked(blood_x, blood_y, blood, 0);
+
+  if (newPlay) initNewPlay(); // Remettre à zéro si nécessaire
+  
+  // Afficher les portraits en haut à gauche
   if (level == 0) sprites.drawSelfMasked(0, 0, ursula, 0);
   if (level == 1) sprites.drawSelfMasked(0, 0, fran6lalan, 0);
   arduboy.fillRect(0, 16, 16, 32);
-  //image(image_level[level], 0, 0, 160, 160);
+
+  // Afficher le nombre de gouttes ratées
   if (slip == 0) sprites.drawSelfMasked(0, 48, slip0, 0);
   if (slip == 1) sprites.drawSelfMasked(0, 48, slip1, 0);
   if (slip == 2) sprites.drawSelfMasked(0, 48, slip2, 0);
   if (slip == 3) sprites.drawSelfMasked(0, 48, slip3, 0);
-  //image(slip_level[slip], 0, height - 160, 160, 160);
+
+  // afficher le nombre de gouttes attrapées
   if (jauge == 0) sprites.drawSelfMasked(120, 0, jauge0, 0);
   if (jauge == 1) sprites.drawSelfMasked(120, 0, jauge1, 0);
   if (jauge == 2) sprites.drawSelfMasked(120, 0, jauge2, 0);
   if (jauge == 3) sprites.drawSelfMasked(120, 0, jauge3, 0);
-  //image(jauge_level[jauge], width - 80, 0, 80, 640);
 
   // Adapter la position du player
   if (arduboy.pressed(LEFT_BUTTON)) pos -= 2;
@@ -139,14 +141,12 @@ void gamePlaying() {
   player_x = adapterPosition(pos);
 
   sprites.drawSelfMasked(player_x, player_y, cup, 0);
-  //image(cup, player_x, player_y, 80, 80);
 
   // Déplacer et afficher la goutte de sang
   blood_x += blood_dx;
-  //if (arduboy.everyXFrames(2)) blood_y += blood_dy;
   blood_y += blood_dy;
+  
   sprites.drawSelfMasked(blood_x, blood_y, blood, 0);
-  //image(blood, blood_x, blood_y, 80, 80);
 
   // Test : a t'on attrapé la goutte ?
   float dd = dist(player_x, player_y, blood_x, blood_y);
@@ -168,14 +168,12 @@ void gamePlaying() {
 
 void gameOverWin() {
   sprites.drawSelfMasked(0, 0, win, 0);
-  //delay(5000);
   newPlay = true;
   initNewPlay();
 }
 
 void gameOverLost() {
   sprites.drawSelfMasked(0, 0, gameover, 0);
-  //delay(5000);
   newPlay = true;
   initNewPlay();
 }
